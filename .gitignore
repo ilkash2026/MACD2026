@@ -6,3 +6,5 @@ coverage
 .DS_Store
 *.log
 apps/backend/uploads
+
+apps/backend/apps/backend/uploads
