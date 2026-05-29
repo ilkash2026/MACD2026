@@ -73,6 +73,11 @@ jobs:
           OPERATOR_API_KEY: ${{ secrets.OPERATOR_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
+          if [ -z "$DB_USER" ] || [ -z "$DB_PASS" ] || [ "$DB_USER" = "-" ] || [ "$DB_PASS" = "-" ]; then
+            echo "Invalid DB secrets: set DB_USER/DB_PASS in GitHub Actions secrets."
+            exit 1
+          fi
+
           DATABASE_URL="postgresql://$DB_USER:$DB_PASS@localhost/$DB_NAME?host=/cloudsql/$CLOUD_SQL_INSTANCE"
 
           gcloud run deploy "$BACKEND_SERVICE" \
