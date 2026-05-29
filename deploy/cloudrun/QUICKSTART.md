@@ -103,7 +103,7 @@ Now build and deploy frontend against BACKEND_URL:
 
 ```bash
 docker build -f apps/frontend/Dockerfile \
-  --build-arg VITE_API_BASE_URL="$BACKEND_URL/api/v1" \
+  --build-arg VITE_API_BASE_URL="$BACKEND_URL" \
   --build-arg VITE_SOCKET_URL="$BACKEND_URL" \
   --build-arg VITE_OPERATOR_API_KEY="macd2026-operator-key" \
   -t europe-west3-docker.pkg.dev/macd2026/inner-circle/frontend:latest .
