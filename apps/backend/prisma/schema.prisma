@@ -1,0 +1,175 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RoomMode {
+  CLOSED
+  VERIFICATION
+  EVALUATION
+  OPEN
+  BLOCKED
+}
+
+enum DoorStatus {
+  CLOSED
+  OPEN
+}
+
+enum SessionState {
+  CREATED
+  VERIFICATION
+  EVALUATION
+  PASSED
+  FAILED
+  UNCERTAIN
+  OVERRIDDEN
+  COMPLETED
+}
+
+enum EvaluationResult {
+  PASSED
+  FAILED
+  UNCERTAIN
+}
+
+enum DeviceType {
+  PI
+  TABLET
+  DISPLAY
+  OPERATOR
+}
+
+model RoomState {
+  id                 String     @id @default("global")
+  mode               RoomMode   @default(CLOSED)
+  activeSessionId    String?    @unique
+  doorStatus         DoorStatus @default(CLOSED)
+  occupancyCount     Int        @default(0)
+  openUntil          DateTime?
+  evaluationDeadline DateTime?
+  currentTaskId      String?
+  updatedAt          DateTime   @updatedAt
+
+  activeSession Session? @relation("active_session", fields: [activeSessionId], references: [id])
+  currentTask   Task?    @relation(fields: [currentTaskId], references: [id])
+}
+
+model Session {
+  id                  String      @id @default(cuid())
+  state               SessionState @default(CREATED)
+  createdAt           DateTime    @default(now())
+  startedByDevice     String
+  activeTaskId        String
+  observationStartedAt DateTime?
+  observationEndedAt  DateTime?
+  solveStartedAt      DateTime?
+  solveEndedAt        DateTime?
+  evaluationResult    EvaluationResult?
+  overrideAction      String?
+  overrideReason      String?
+  finalOutcome        String?
+
+  task          Task                   @relation(fields: [activeTaskId], references: [id])
+  evaluations   SubmissionEvaluation[]
+
+  roomState RoomState? @relation("active_session")
+}
+
+model Task {
+  id                String   @id @default(cuid())
+  name              String
+  category          String
+  instructionInner  String
+  evaluationPrompt  String
+  active            Boolean  @default(true)
+  difficulty        Int      @default(1)
+  version           Int      @default(1)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  sessions Session[]
+  currentInRoomStates RoomState[]
+}
+
+model SubmissionEvaluation {
+  id               String           @id @default(cuid())
+  sessionId        String
+  imageUrl         String
+  evaluationStatus String
+  confidence       Float?
+  rawModelResponse Json
+  normalizedResult EvaluationResult
+  latencyMs        Int
+  createdAt        DateTime         @default(now())
+
+  session Session @relation(fields: [sessionId], references: [id])
+}
+
+model Device {
+  id            String    @id
+  type          DeviceType
+  role          String
+  status        String    @default("OFFLINE")
+  lastHeartbeat DateTime?
+  metadata      Json?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  events DeviceEvent[]
+}
+
+model DeviceEvent {
+  id         String   @id @default(cuid())
+  deviceId   String
+  type       String
+  payload    Json
+  occurredAt DateTime @default(now())
+
+  device Device @relation(fields: [deviceId], references: [id])
+}
+
+model Drink {
+  id             String   @id @default(cuid())
+  name           String
+  active         Boolean  @default(true)
+  basePriceOuter Float
+  basePriceInner Float
+  pricingRuleId  String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  pricingRule PricingRule? @relation(fields: [pricingRuleId], references: [id])
+}
+
+model PricingRule {
+  id        String   @id @default(cuid())
+  name      String
+  config    Json
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  drinks Drink[]
+}
+
+model OperatorAction {
+  id          String   @id @default(cuid())
+  action      String
+  payload     Json
+  reason      String
+  performedAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  type      String
+  severity  String
+  message   String
+  payload   Json
+  createdAt DateTime @default(now())
+}

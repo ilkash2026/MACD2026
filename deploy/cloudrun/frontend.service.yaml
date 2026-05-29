@@ -1,0 +1,14 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: inner-circle-frontend
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "1"
+    spec:
+      containers:
+        - image: REGION-docker.pkg.dev/PROJECT/inner-circle/frontend:latest
+          ports:
+            - containerPort: 4173

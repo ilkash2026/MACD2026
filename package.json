@@ -1,0 +1,18 @@
+{
+  "name": "inner-circle-mvp",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @inner-circle/backend & npm run dev -w @inner-circle/frontend",
+    "build": "npm run build -w @inner-circle/contracts && npm run build -w @inner-circle/backend && npm run build -w @inner-circle/frontend",
+    "test": "npm run test -w @inner-circle/backend",
+    "lint": "npm run lint -w @inner-circle/backend && npm run lint -w @inner-circle/frontend"
+  },
+  "dependencies": {
+    "docker": "^1.0.0"
+  }
+}

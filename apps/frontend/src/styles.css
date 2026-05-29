@@ -1,0 +1,428 @@
+:root {
+  --bg-0: #070809;
+  --bg-1: #101418;
+  --panel: rgba(20, 26, 32, 0.88);
+  --line: rgba(200, 222, 246, 0.2);
+  --text: #ebf2fa;
+  --muted: #9eb3c9;
+  --danger: #d7263d;
+  --ok: #22c55e;
+  --accent: #55c1ff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Space Grotesk", sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 10% 20%, rgba(85, 193, 255, 0.14), transparent 35%),
+    radial-gradient(circle at 90% 15%, rgba(34, 197, 94, 0.12), transparent 30%),
+    linear-gradient(180deg, var(--bg-0) 0%, var(--bg-1) 100%);
+  min-height: 100vh;
+}
+
+a {
+  color: var(--accent);
+}
+
+.screen {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+h1,
+h2 {
+  letter-spacing: 0.03em;
+  margin: 0 0 1rem;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 1rem;
+  margin: 1rem 0;
+  backdrop-filter: blur(6px);
+}
+
+.accessScreen {
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+
+.accessWallpaper,
+.accessStation {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+}
+
+.accessWallpaper {
+  position: relative;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(85, 193, 255, 0.26), transparent 28%),
+    radial-gradient(circle at 85% 15%, rgba(34, 197, 94, 0.18), transparent 26%),
+    radial-gradient(circle at 50% 85%, rgba(215, 38, 61, 0.16), transparent 32%),
+    linear-gradient(180deg, #040608 0%, #0a1016 100%);
+}
+
+.accessWallpaperGlow {
+  position: absolute;
+  inset: -10%;
+  background:
+    radial-gradient(circle at 50% 35%, rgba(85, 193, 255, 0.18), transparent 26%),
+    radial-gradient(circle at 50% 65%, rgba(85, 193, 255, 0.08), transparent 40%);
+  filter: blur(18px);
+  opacity: 0.9;
+}
+
+.accessWallpaperPanel,
+.accessStationHeader,
+.accessStatusPanel,
+.accessActions,
+.accessStatus,
+.accessCountdown {
+  position: relative;
+  z-index: 1;
+}
+
+.accessWallpaperPanel,
+.accessStationHeader {
+  max-width: 720px;
+  width: min(100%, 720px);
+  text-align: center;
+}
+
+.accessWallpaperPanel {
+  padding: 2rem;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(8, 12, 16, 0.62);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.34);
+}
+
+.accessWallpaperLabel {
+  margin: 0 0 0.5rem;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 0.78rem;
+}
+
+.accessWallpaper h1,
+.accessStation h1 {
+  margin-bottom: 0.75rem;
+  font-size: clamp(2.4rem, 7vw, 4.8rem);
+}
+
+.accessWallpaperMeta {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 1.25rem;
+  color: var(--muted);
+  font-family: "IBM Plex Mono", monospace;
+}
+
+.accessStation {
+  background:
+    radial-gradient(circle at 15% 15%, rgba(85, 193, 255, 0.14), transparent 28%),
+    radial-gradient(circle at 85% 20%, rgba(34, 197, 94, 0.1), transparent 28%),
+    linear-gradient(180deg, #05070a 0%, #0d1319 100%);
+}
+
+.accessStationHeader {
+  margin-bottom: 1rem;
+}
+
+.accessCameraFrame {
+  position: relative;
+  width: min(100%, 900px);
+  aspect-ratio: 16 / 10;
+  border-radius: 24px;
+  overflow: hidden;
+  border: 1px solid rgba(85, 193, 255, 0.24);
+  background: #020406;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.38);
+}
+
+.accessCameraVideo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transform: scaleX(-1);
+}
+
+.accessCameraOverlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  gap: 0.75rem;
+  background: linear-gradient(180deg, rgba(3, 7, 12, 0.12) 0%, rgba(3, 7, 12, 0.42) 100%);
+  text-align: center;
+  padding: 1rem;
+}
+
+.accessCameraBadge {
+  align-self: start;
+  justify-self: start;
+  background: rgba(215, 38, 61, 0.92);
+  color: white;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  letter-spacing: 0.16em;
+  font-size: 0.72rem;
+  font-weight: 700;
+  box-shadow: 0 0 24px rgba(215, 38, 61, 0.35);
+}
+
+.accessCameraCopy {
+  font-size: clamp(1.2rem, 3vw, 2rem);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text);
+  text-shadow: 0 0 24px rgba(0, 0, 0, 0.6);
+}
+
+.accessResultCard {
+  width: min(100%, 720px);
+  text-align: center;
+  margin: 1rem auto 0;
+}
+
+.accessResultSuccess {
+  border-color: rgba(34, 197, 94, 0.45);
+  box-shadow: 0 0 30px rgba(34, 197, 94, 0.12);
+}
+
+.accessResultFailed {
+  border-color: rgba(215, 38, 61, 0.45);
+  box-shadow: 0 0 30px rgba(215, 38, 61, 0.12);
+}
+
+.accessCountdown {
+  font-size: clamp(4.5rem, 14vw, 10rem);
+  font-weight: 700;
+  line-height: 1;
+  color: var(--accent);
+  text-shadow: 0 0 32px rgba(85, 193, 255, 0.35);
+  margin-bottom: 0.5rem;
+}
+
+.accessStatusPanel {
+  width: min(100%, 720px);
+  margin: 1rem auto;
+  text-align: center;
+}
+
+.accessActions {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+.accessSolveButton {
+  min-width: 220px;
+  min-height: 84px;
+  font-size: clamp(1.4rem, 4vw, 2.2rem);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #1b3146 0%, #102133 100%);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+}
+
+.accessStatus {
+  text-align: center;
+  color: var(--muted);
+  font-size: 1rem;
+  max-width: 720px;
+  margin: 1rem auto 0;
+}
+
+.cameraPreviewCard {
+  margin: 0.75rem 0 1rem;
+  border: 1px solid rgba(85, 193, 255, 0.32);
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(8, 12, 16, 0.72);
+}
+
+.cameraPreviewHeader {
+  padding: 0.65rem 0.8rem;
+  border-bottom: 1px solid rgba(85, 193, 255, 0.18);
+  color: var(--muted);
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.cameraPreviewImage {
+  display: block;
+  width: 100%;
+  max-height: 360px;
+  object-fit: contain;
+  background: #05070a;
+}
+
+.highlight {
+  border-color: rgba(85, 193, 255, 0.7);
+  box-shadow: 0 0 30px rgba(85, 193, 255, 0.18);
+}
+
+button,
+.fileInput {
+  background: #16212d;
+  color: var(--text);
+  border: 1px solid rgba(85, 193, 255, 0.35);
+  border-radius: 10px;
+  padding: 0.8rem 1rem;
+  font-size: 1rem;
+  margin-right: 0.6rem;
+  margin-bottom: 0.6rem;
+}
+
+button:disabled {
+  opacity: 0.4;
+}
+
+.fileInput input {
+  display: block;
+  margin-top: 0.6rem;
+}
+
+.nav {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  font-family: "IBM Plex Mono", monospace;
+}
+
+.navActive {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.traffic {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  transition: background 250ms ease;
+}
+
+.traffic.red {
+  background: radial-gradient(circle at center, #69111d 0%, #18070a 55%, #060303 100%);
+}
+
+.traffic.green {
+  background: radial-gradient(circle at center, #0c5e2d 0%, #052516 58%, #030907 100%);
+}
+
+.trafficText {
+  font-size: clamp(4rem, 12vw, 12rem);
+  letter-spacing: 0.08em;
+  font-weight: 700;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.full {
+  grid-column: 1 / -1;
+}
+
+.taskList {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.taskCard {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.8rem;
+  background: rgba(8, 12, 16, 0.45);
+}
+
+.taskCreateBlock {
+  margin-top: 1rem;
+  border-top: 1px solid var(--line);
+  padding-top: 1rem;
+}
+
+.taskRow {
+  display: grid;
+  gap: 0.3rem;
+  margin-bottom: 0.6rem;
+}
+
+.taskRow label {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.taskRow input,
+.taskRow textarea,
+.taskRow select {
+  width: 100%;
+  background: #0f1822;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.55rem 0.65rem;
+  font-family: "IBM Plex Mono", monospace;
+}
+
+.taskRowSplit {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.taskCheckboxRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.taskCheckboxRow input {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.78rem;
+}
+
+@media (max-width: 720px) {
+  .screen {
+    padding: 1rem;
+  }
+
+  .taskRowSplit {
+    grid-template-columns: 1fr;
+  }
+}

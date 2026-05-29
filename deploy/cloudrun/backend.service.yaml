@@ -1,0 +1,42 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: inner-circle-backend
+spec:
+  template:
+    metadata:
+      annotations:
+        run.googleapis.com/cloudsql-instances: PROJECT:REGION:INSTANCE
+        autoscaling.knative.dev/minScale: "1"
+    spec:
+      containerConcurrency: 80
+      timeoutSeconds: 300
+      containers:
+        - image: REGION-docker.pkg.dev/PROJECT/inner-circle/backend:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: PORT
+              value: "8080"
+            - name: DATABASE_URL
+              value: postgresql://DB_USER:DB_PASS@/inner_circle?host=/cloudsql/PROJECT:REGION:INSTANCE
+            - name: OPERATOR_API_KEY
+              value: change-me
+            - name: OPENAI_API_KEY
+              value: change-me
+            - name: OPENAI_MODEL
+              value: gpt-4.1-mini
+            - name: IMAGE_STORAGE_MODE
+              value: gcs
+            - name: GCS_BUCKET_NAME
+              value: inner-circle-mvp-images
+            - name: GCP_PROJECT_ID
+              value: PROJECT
+            - name: OPEN_WINDOW_SECONDS
+              value: "20"
+            - name: EVALUATION_TIMEOUT_SECONDS
+              value: "30"
+            - name: ALLOW_UNCERTAIN_AUTO_OPEN
+              value: "false"

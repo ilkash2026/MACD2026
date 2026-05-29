@@ -1,0 +1,44 @@
+version: "3.9"
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: inner_circle
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/inner_circle
+      PORT: 8080
+      IMAGE_STORAGE_MODE: local
+      LOCAL_UPLOAD_DIR: apps/backend/uploads
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+    environment:
+      VITE_API_BASE_URL: http://localhost:8080
+      VITE_SOCKET_URL: http://localhost:8080
+      VITE_OPERATOR_API_KEY: change-me
+    ports:
+      - "4173:4173"
+    depends_on:
+      - backend
+
+volumes:
+  pg_data:
