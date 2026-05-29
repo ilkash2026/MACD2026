@@ -70,18 +70,27 @@ jobs:
             .
           echo "BACKEND_IMAGE=$BACKEND_IMAGE" >> "$GITHUB_ENV"
 
-      - name: Deploy backend service
-        env:
-          DB_USER: ${{ secrets.DB_USER }}
-          DB_PASS: ${{ secrets.DB_PASS }}
-          OPERATOR_API_KEY: ${{ secrets.OPERATOR_API_KEY }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      - name: Load deploy secrets from Secret Manager
         run: |
+          DB_USER=$(gcloud secrets versions access latest --secret="${{ vars.GCP_SECRET_DB_USER }}" --project "$PROJECT_ID")
+          DB_PASS=$(gcloud secrets versions access latest --secret="${{ vars.GCP_SECRET_DB_PASS }}" --project "$PROJECT_ID")
+          OPERATOR_API_KEY=$(gcloud secrets versions access latest --secret="${{ vars.GCP_SECRET_OPERATOR_API_KEY }}" --project "$PROJECT_ID")
+          OPENAI_API_KEY=$(gcloud secrets versions access latest --secret="${{ vars.GCP_SECRET_OPENAI_API_KEY }}" --project "$PROJECT_ID")
+
           if [ -z "$DB_USER" ] || [ -z "$DB_PASS" ] || [ "$DB_USER" = "-" ] || [ "$DB_PASS" = "-" ]; then
-            echo "Invalid DB secrets: set DB_USER/DB_PASS in GitHub Actions secrets."
+            echo "Invalid deploy secrets from Secret Manager."
             exit 1
           fi
 
+          {
+            echo "DB_USER=$DB_USER"
+            echo "DB_PASS=$DB_PASS"
+            echo "OPERATOR_API_KEY=$OPERATOR_API_KEY"
+            echo "OPENAI_API_KEY=$OPENAI_API_KEY"
+          } >> "$GITHUB_ENV"
+
+      - name: Deploy backend service
+        run: |
           DATABASE_URL="postgresql://$DB_USER:$DB_PASS@localhost/$DB_NAME?host=/cloudsql/$CLOUD_SQL_INSTANCE"
 
           gcloud run deploy "$BACKEND_SERVICE" \
@@ -101,7 +110,6 @@ jobs:
       - name: Build and push frontend image
         env:
           IMAGE_TAG: ${{ github.sha }}
-          OPERATOR_API_KEY: ${{ secrets.OPERATOR_API_KEY }}
         run: |
           FRONTEND_IMAGE="$REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/frontend:$IMAGE_TAG"
           docker buildx build \
