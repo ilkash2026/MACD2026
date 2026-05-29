@@ -39,7 +39,7 @@ export class OpenAIEvaluationAdapter implements IEvaluationAdapter {
           role: "user",
           content: [
             { type: "input_text", text: payload.taskPrompt },
-            { type: "input_image", image_url: payload.imageDataUrl }
+            { type: "input_image", image_url: payload.imageDataUrl, detail: "auto" }
           ]
         }
       ]

@@ -1,9 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, NavLink, Navigate, Route, Routes } from "react-router-dom";
-import { RoomMode } from "@inner-circle/contracts";
 import { api } from "./api";
 import { socket } from "./socket";
 import type { InnerDisplayData } from "./types";
+
+const ROOM_MODE = {
+  CLOSED: "CLOSED",
+  VERIFICATION: "VERIFICATION",
+  EVALUATION: "EVALUATION",
+  OPEN: "OPEN",
+  BLOCKED: "BLOCKED"
+} as const;
 
 type TaskEditorState = {
   id?: string;
@@ -124,10 +131,10 @@ function AccessPage() {
   }, []);
 
   const activeSessionId = roomState?.activeSessionId ?? null;
-  const sessionIsReady = roomState?.mode === RoomMode.VERIFICATION && Boolean(activeSessionId);
+  const sessionIsReady = roomState?.mode === ROOM_MODE.VERIFICATION && Boolean(activeSessionId);
   const showWallpaper = !activeSessionId && phase === "idle";
   const showCamera = phase === "arming" || phase === "countdown" || phase === "capturing" || phase === "submitting";
-  const wallpaperMessage = roomState?.mode === RoomMode.OPEN ? "OPEN" : roomState?.mode === RoomMode.BLOCKED ? "BLOCKED" : "STANDBY";
+  const wallpaperMessage = roomState?.mode === ROOM_MODE.OPEN ? "OPEN" : roomState?.mode === ROOM_MODE.BLOCKED ? "BLOCKED" : "STANDBY";
 
   const waitForVideoElement = async () => {
     await new Promise<void>((resolve) => {
@@ -335,7 +342,7 @@ function InnerDisplayPage() {
   return (
     <div className="screen inner">
       <h1>Inner Room Display</h1>
-      {data?.mode === RoomMode.VERIFICATION && data.task ? (
+      {data?.mode === ROOM_MODE.VERIFICATION && data.task ? (
         <div className="panel highlight">
           <h2>Current Social Cue</h2>
           <p>{data.task.instructionInner}</p>
@@ -359,7 +366,7 @@ function InnerDisplayPage() {
 
 function TrafficLightPage() {
   const { roomState } = useRoomState();
-  const green = roomState?.mode === RoomMode.OPEN;
+  const green = roomState?.mode === ROOM_MODE.OPEN;
   return (
     <div className={`traffic ${green ? "green" : "red"}`}>
       <div className="trafficText">{green ? "OPEN" : "STOP"}</div>
@@ -448,7 +455,7 @@ function OperatorPage() {
           <h2>Overrides</h2>
           {overrideStatus ? <p>{overrideStatus}</p> : null}
           <div className="buttons">
-            <button onClick={startSessionFromOperator} disabled={roomState?.mode !== RoomMode.CLOSED}>
+            <button onClick={startSessionFromOperator} disabled={roomState?.mode !== ROOM_MODE.CLOSED}>
               Buzzer / Start Session
             </button>
             <button onClick={() => override("PASS")}>Manual Pass</button>

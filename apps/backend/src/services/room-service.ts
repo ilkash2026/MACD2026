@@ -7,7 +7,7 @@ import {
   type PricingSnapshot,
   type RoomStateDTO
 } from "@inner-circle/contracts";
-import type { Task } from "@prisma/client";
+import { Prisma, type Task } from "@prisma/client";
 import { config } from "../config";
 import { prisma } from "../db";
 import { calculateInnerPrice, type PricingConfig } from "../domain/pricing-engine";
@@ -152,7 +152,7 @@ export class RoomService {
 
   async processDeviceEvent(deviceId: string, type: string, payload: Record<string, unknown>): Promise<void> {
     await prisma.deviceEvent.create({
-      data: { deviceId, type, payload }
+      data: { deviceId, type, payload: payload as Prisma.InputJsonValue }
     });
 
     const dedupeKey = `${deviceId}:${type}`;
@@ -182,7 +182,7 @@ export class RoomService {
       data: {
         action: input.action,
         reason: input.reason,
-        payload: { sessionId: input.sessionId }
+        payload: { sessionId: input.sessionId } as Prisma.InputJsonValue
       }
     });
 
@@ -273,12 +273,12 @@ export class RoomService {
         role: metadata.role && typeof metadata.role === "string" ? metadata.role : "unknown",
         status: "ONLINE",
         lastHeartbeat: new Date(),
-        metadata
+        metadata: metadata as Prisma.InputJsonValue
       },
       update: {
         status: "ONLINE",
         lastHeartbeat: new Date(),
-        metadata
+        metadata: metadata as Prisma.InputJsonValue
       }
     });
 
@@ -423,7 +423,7 @@ export class RoomService {
 
   private async logAudit(type: string, severity: string, message: string, payload: Record<string, unknown>): Promise<void> {
     const entry = await prisma.auditLog.create({
-      data: { type, severity, message, payload }
+      data: { type, severity, message, payload: payload as Prisma.InputJsonValue }
     });
 
     emitEvent("operator.audit.logged", {

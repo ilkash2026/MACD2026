@@ -14,7 +14,12 @@ gcloud auth configure-docker REGION-docker.pkg.dev
 docker build -f apps/backend/Dockerfile -t REGION-docker.pkg.dev/PROJECT/inner-circle/backend:latest .
 docker push REGION-docker.pkg.dev/PROJECT/inner-circle/backend:latest
 
-docker build -f apps/frontend/Dockerfile -t REGION-docker.pkg.dev/PROJECT/inner-circle/frontend:latest .
+docker build \
+	-f apps/frontend/Dockerfile \
+	--build-arg VITE_API_BASE_URL=https://BACKEND_RUN_URL \
+	--build-arg VITE_SOCKET_URL=https://BACKEND_RUN_URL \
+	--build-arg VITE_OPERATOR_API_KEY=YOUR_OPERATOR_KEY \
+	-t REGION-docker.pkg.dev/PROJECT/inner-circle/frontend:latest .
 docker push REGION-docker.pkg.dev/PROJECT/inner-circle/frontend:latest
 ```
 
@@ -46,3 +51,13 @@ npm run prisma:seed -w @inner-circle/backend
 - Socket.IO works with Cloud Run WebSocket support.
 - Keep backend minScale 1 for this installation MVP.
 - For this MVP use single backend instance semantics to avoid multi-instance room-state contention.
+
+## 6. Central URL strategy
+
+- End users should access only the frontend Cloud Run URL (or mapped custom domain).
+- All kiosk routes are available from the same host:
+	- /access
+	- /inner-display
+	- /traffic-light
+	- /operator
+- The frontend calls backend API and Socket.IO using Vite build args set during image build.
