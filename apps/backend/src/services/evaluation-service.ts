@@ -16,7 +16,16 @@ export class EvaluationService {
     mimeType: string;
   }): Promise<EvaluationResult> {
     const start = Date.now();
-    const uploaded = await this.storageService.uploadBase64Image(input.imageBase64, input.mimeType, input.sessionId);
+    let uploadedUrl = "";
+    let storageUploadError: string | null = null;
+
+    try {
+      const uploaded = await this.storageService.uploadBase64Image(input.imageBase64, input.mimeType, input.sessionId);
+      uploadedUrl = uploaded.url;
+    } catch (error) {
+      storageUploadError = (error as Error).message;
+    }
+
     const evaluation = await this.adapter.evaluate({
       taskPrompt: input.taskPrompt,
       imageDataUrl: `data:${input.mimeType};base64,${input.imageBase64}`
@@ -25,10 +34,13 @@ export class EvaluationService {
     await prisma.submissionEvaluation.create({
       data: {
         sessionId: input.sessionId,
-        imageUrl: uploaded.url,
+        imageUrl: uploadedUrl,
         evaluationStatus: "COMPLETED",
         confidence: evaluation.confidence,
-        rawModelResponse: evaluation.raw as object,
+        rawModelResponse: {
+          model: evaluation.raw,
+          ...(storageUploadError ? { storageUploadError } : {})
+        } as object,
         normalizedResult: evaluation.result,
         latencyMs: Date.now() - start
       }

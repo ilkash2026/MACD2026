@@ -20,8 +20,7 @@ export class StorageService {
       const bucket = this.gcs.bucket(config.gcsBucketName);
       const file = bucket.file(key);
       await file.save(buffer, { contentType: mimeType });
-      await file.makePublic();
-      return { key, url: `https://storage.googleapis.com/${config.gcsBucketName}/${key}` };
+      return { key, url: `gs://${config.gcsBucketName}/${key}` };
     }
 
     const outputDir = path.resolve(process.cwd(), config.localUploadDir);
