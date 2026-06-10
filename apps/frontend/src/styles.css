@@ -148,6 +148,10 @@ h2 {
   margin-bottom: 1rem;
 }
 
+.accessTaskPanel {
+  width: min(100%, 1000px);
+}
+
 .accessCameraFrame {
   position: relative;
   width: min(100%, 900px);
