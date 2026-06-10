@@ -57,9 +57,7 @@ export class RoomService {
       throw new Error("Room is not in CLOSED mode");
     }
 
-    const task =
-      (await prisma.task.findFirst({ where: { active: true }, orderBy: { updatedAt: "desc" } })) ??
-      (await prisma.task.findFirst({ orderBy: { updatedAt: "desc" } }));
+    const task = await this.selectTaskForSession(room.currentTaskId);
     if (!task) throw new Error("No active task configured");
 
     const session = await prisma.session.create({
@@ -314,6 +312,20 @@ export class RoomService {
     const room = await prisma.roomState.findUnique({ where: { id: "global" } });
     if (!room?.currentTaskId) return null;
     return prisma.task.findUnique({ where: { id: room.currentTaskId } });
+  }
+
+  private async selectTaskForSession(currentTaskId: string | null): Promise<Task | null> {
+    const activeTasks = await prisma.task.findMany({ where: { active: true } });
+    const candidateTasks = activeTasks.length > 0 ? activeTasks : await prisma.task.findMany();
+    if (candidateTasks.length === 0) return null;
+
+    const withoutCurrent =
+      currentTaskId && candidateTasks.length > 1
+        ? candidateTasks.filter((task) => task.id !== currentTaskId)
+        : candidateTasks;
+
+    const randomIndex = Math.floor(Math.random() * withoutCurrent.length);
+    return withoutCurrent[randomIndex] ?? null;
   }
 
   private async computePricingSnapshot(occupancy: number): Promise<PricingSnapshot> {
