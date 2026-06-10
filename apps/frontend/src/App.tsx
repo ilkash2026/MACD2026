@@ -39,6 +39,7 @@ type PricingRuleEditorState = {
 };
 
 type AccessPhase = "idle" | "arming" | "countdown" | "capturing" | "submitting" | "success" | "failed";
+type AccessStage = "idle" | "task" | "verification";
 
 function toTaskEditorState(task: any): TaskEditorState {
   return {
@@ -111,9 +112,12 @@ function AccessPage() {
   const { roomState, reload } = useRoomState();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const [stage, setStage] = useState<AccessStage>("idle");
   const [status, setStatus] = useState("Bereit.");
+  const [taskInstruction, setTaskInstruction] = useState<string>("");
   const [countdown, setCountdown] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
+  const [startingSession, setStartingSession] = useState(false);
   const [phase, setPhase] = useState<AccessPhase>("idle");
 
   const stopCamera = () => {
@@ -132,9 +136,40 @@ function AccessPage() {
 
   const activeSessionId = roomState?.activeSessionId ?? null;
   const sessionIsReady = roomState?.mode === ROOM_MODE.VERIFICATION && Boolean(activeSessionId);
-  const showWallpaper = !activeSessionId && phase === "idle";
-  const showCamera = phase === "arming" || phase === "countdown" || phase === "capturing" || phase === "submitting";
-  const wallpaperMessage = roomState?.mode === ROOM_MODE.OPEN ? "OPEN" : roomState?.mode === ROOM_MODE.BLOCKED ? "BLOCKED" : "STANDBY";
+  const showVerificationCamera =
+    stage === "verification" && (phase === "arming" || phase === "countdown" || phase === "capturing" || phase === "submitting");
+
+  useEffect(() => {
+    if (roomState?.mode === ROOM_MODE.CLOSED && !activeSessionId) {
+      stopCamera();
+      setStage("idle");
+      setPhase("idle");
+      setCountdown(null);
+      setTaskInstruction("");
+      setStatus("Bereit.");
+      return;
+    }
+
+    if (activeSessionId && stage === "idle") {
+      setStage("task");
+    }
+  }, [roomState?.mode, activeSessionId, stage]);
+
+  const loadTaskInstruction = async () => {
+    try {
+      const response = await api.innerDisplay();
+      const data = response.data as InnerDisplayData;
+      setTaskInstruction(data.task?.instructionInner ?? "Beobachte die Kameras und bereite dich auf die Verifikation vor.");
+    } catch {
+      setTaskInstruction("Beobachte die Kameras und bereite dich auf die Verifikation vor.");
+    }
+  };
+
+  useEffect(() => {
+    if (stage === "task" && activeSessionId) {
+      loadTaskInstruction().catch(console.error);
+    }
+  }, [stage, activeSessionId]);
 
   const waitForVideoElement = async () => {
     await new Promise<void>((resolve) => {
@@ -188,7 +223,30 @@ function AccessPage() {
     return api.submitImage(sessionId, imageBase64, "image/png");
   };
 
-  const solve = async () => {
+  const startSession = async () => {
+    if (startingSession || busy || roomState?.mode !== ROOM_MODE.CLOSED) return;
+
+    setStartingSession(true);
+    try {
+      await api.createSession("access-tablet-buzzer");
+      await reload();
+      await loadTaskInstruction();
+      setStage("task");
+      setStatus("Session gestartet. Drücke auf 'lösen', um in die Verifikation zu wechseln.");
+    } catch (error) {
+      setStatus(`Session konnte nicht gestartet werden: ${(error as Error).message}`);
+    } finally {
+      setStartingSession(false);
+    }
+  };
+
+  const goToVerification = () => {
+    if (!sessionIsReady) return;
+    setStage("verification");
+    setStatus("Verifikation bereit. Starte jetzt die Prüfung.");
+  };
+
+  const runVerification = async () => {
     if (!activeSessionId || !sessionIsReady || busy) return;
 
     setBusy(true);
@@ -220,12 +278,17 @@ function AccessPage() {
       if (evaluationResult === "PASSED") {
         setPhase("success");
         setStatus("Glückwunsch, du bist erfolgreich geprüft worden.");
-        window.setTimeout(() => setPhase("idle"), 2500);
+        window.setTimeout(() => {
+          setPhase("idle");
+          setStage("idle");
+          setStatus("Bereit.");
+        }, 2500);
       } else {
         setPhase("failed");
         setStatus("Zugang abgelehnt. Die Station wechselt wieder zu Closed.");
         window.setTimeout(() => {
           setPhase("idle");
+          setStage("idle");
           setStatus("Bereit.");
         }, 1800);
       }
@@ -238,6 +301,7 @@ function AccessPage() {
       await reload();
       window.setTimeout(() => {
         setPhase("idle");
+        setStage("idle");
         setStatus("Bereit.");
       }, 1800);
     } finally {
@@ -247,186 +311,140 @@ function AccessPage() {
   };
 
   return (
-    <div className={`accessScreen ${showWallpaper ? "accessScreenWallpaper" : "accessScreenActive"}`}>
-      {showWallpaper ? (
-        <div className="accessWallpaper">
-          <div className="accessWallpaperGlow" />
-          <div className="accessWallpaperPanel">
-            <p className="accessWallpaperLabel">Access Control Station</p>
-            <h1>{wallpaperMessage}</h1>
-            <p className="muted">Warte auf eine laufende Session. Sobald der Buzzervorgang gestartet ist, erscheint der Löse-Button.</p>
-            <div className="accessWallpaperMeta">
-              <span>Mode: {roomState?.mode ?? "..."}</span>
-              <span>Door: {roomState?.doorStatus ?? "..."}</span>
-            </div>
-          </div>
+    <div className="accessScreen accessScreenActive">
+      <div className="accessStation">
+        <div className="accessStationHeader">
+          <p className="accessWallpaperLabel">Access Control Station</p>
+          <h1>
+            {stage === "idle"
+              ? "Buzzer"
+              : stage === "task"
+                ? "Task Aktiv"
+                : phase === "success"
+                  ? "Geschafft"
+                  : phase === "failed"
+                    ? "Nochmals versuchen"
+                    : "Verifikation"}
+          </h1>
+          <p className="muted">
+            {stage === "idle"
+              ? "Wenn der Raum auf CLOSED steht, startet der Buzzer eine neue Session."
+              : stage === "task"
+                ? "Die Session läuft. Prüfe die Streams und tippe auf 'lösen', um zur Verifikation zu wechseln."
+                : showVerificationCamera || phase === "success" || phase === "failed"
+                  ? "Du wirst gerade gefilmt. Bitte bleibe im Bild und halte still."
+                  : "Starte jetzt die Verifikation."}
+          </p>
         </div>
-      ) : (
-        <div className="accessStation">
-          <div className="accessStationHeader">
-            <p className="accessWallpaperLabel">Access Control Station</p>
-            <h1>{phase === "success" ? "Geschafft" : phase === "failed" ? "Nochmals versuchen" : "Lösen"}</h1>
-            <p className="muted">
-              {showCamera || phase === "success" || phase === "failed"
-                ? "Du wirst gerade gefilmt. Bitte bleibe im Bild und halte still."
-                : sessionIsReady
-                  ? "Session aktiv. Der Button startet den Countdown, zeigt die Kamera und sendet das Bild zur Evaluation."
-                  : "Session läuft gerade, bitte warten."}
-            </p>
-          </div>
 
-          {showCamera ? (
-            <div className="accessCameraFrame">
-              <video ref={videoRef} className="accessCameraVideo" autoPlay playsInline muted />
-              <div className="accessCameraOverlay">
-                <div className="accessCameraBadge">LIVE</div>
-                <div className="accessCameraCopy">Du wirst gefilmt</div>
-                {countdown ? <div className="accessCountdown">{countdown}</div> : null}
+        {stage === "idle" ? (
+          <div className="buzzerPanel accessTaskPanel">
+            <div className="panel buzzerInstructions">
+              <h2>Session starten</h2>
+              <p>Auf diesem Tablet laufen Buzzer und Access in einer Oberfläche.</p>
+              <p className="muted">Drücke den Buzzer, um die Session und den Task zu starten.</p>
+            </div>
+            <button className="buzzerButton" onClick={startSession} disabled={startingSession || roomState?.mode !== ROOM_MODE.CLOSED}>
+              {startingSession ? "Starte..." : "BUZZER"}
+            </button>
+          </div>
+        ) : null}
+
+        {stage === "task" ? (
+          <div className="buzzerActive accessTaskPanel">
+            <div className="panel buzzerInstructions">
+              <h2>Aktueller Task</h2>
+              <p>{taskInstruction || "Task wird geladen..."}</p>
+            </div>
+
+            <div className="cameraGrid">
+              <div className="cameraStream">
+                <div className="cameraPlaceholder">
+                  <div className="cameraPlaceholderContent">
+                    <span>KAMERA 1</span>
+                    <span className="cameraPlaceholderSubtext">Placeholder Stream</span>
+                  </div>
+                </div>
+              </div>
+              <div className="cameraStream">
+                <div className="cameraPlaceholder">
+                  <div className="cameraPlaceholderContent">
+                    <span>KAMERA 2</span>
+                    <span className="cameraPlaceholderSubtext">Placeholder Stream</span>
+                  </div>
+                </div>
+              </div>
+              <div className="cameraStream">
+                <div className="cameraPlaceholder">
+                  <div className="cameraPlaceholderContent">
+                    <span>KAMERA 3</span>
+                    <span className="cameraPlaceholderSubtext">Placeholder Stream</span>
+                  </div>
+                </div>
+              </div>
+              <div className="cameraStream">
+                <div className="cameraPlaceholder">
+                  <div className="cameraPlaceholderContent">
+                    <span>KAMERA 4</span>
+                    <span className="cameraPlaceholderSubtext">Placeholder Stream</span>
+                  </div>
+                </div>
               </div>
             </div>
-          ) : null}
 
-          <div className="panel accessStatusPanel">
-            <p>Mode: {roomState?.mode ?? "..."}</p>
-            <p>Door: {roomState?.doorStatus ?? "..."}</p>
-            <p>Active Session: {activeSessionId ?? "none"}</p>
-          </div>
-
-          {phase === "success" ? (
-            <div className="panel accessResultCard accessResultSuccess">
-              <h2>Glückwunsch</h2>
-              <p>Du hast die Prüfung erfolgreich bestanden.</p>
-            </div>
-          ) : null}
-
-          {phase === "failed" ? (
-            <div className="panel accessResultCard accessResultFailed">
-              <h2>Kein Zutritt</h2>
-              <p>Der Versuch war nicht erfolgreich. Die Station schaltet wieder auf Closed.</p>
-            </div>
-          ) : null}
-
-          {phase === "idle" && sessionIsReady ? (
             <div className="accessActions">
-              <button className="accessSolveButton" onClick={solve} disabled={busy || !sessionIsReady}>
+              <button className="accessSolveButton" onClick={goToVerification} disabled={!sessionIsReady}>
                 lösen
               </button>
             </div>
-          ) : null}
+          </div>
+        ) : null}
 
-          <p className="accessStatus">{status}</p>
+        {stage === "verification" ? (
+          <>
+            {showVerificationCamera ? (
+              <div className="accessCameraFrame">
+                <video ref={videoRef} className="accessCameraVideo" autoPlay playsInline muted />
+                <div className="accessCameraOverlay">
+                  <div className="accessCameraBadge">LIVE</div>
+                  <div className="accessCameraCopy">Du wirst gefilmt</div>
+                  {countdown ? <div className="accessCountdown">{countdown}</div> : null}
+                </div>
+              </div>
+            ) : null}
+
+            {phase === "success" ? (
+              <div className="panel accessResultCard accessResultSuccess">
+                <h2>Glückwunsch</h2>
+                <p>Du hast die Prüfung erfolgreich bestanden.</p>
+              </div>
+            ) : null}
+
+            {phase === "failed" ? (
+              <div className="panel accessResultCard accessResultFailed">
+                <h2>Kein Zutritt</h2>
+                <p>Der Versuch war nicht erfolgreich. Die Station schaltet wieder auf Closed.</p>
+              </div>
+            ) : null}
+
+            {phase === "idle" ? (
+              <div className="accessActions">
+                <button className="accessSolveButton" onClick={runVerification} disabled={busy || !sessionIsReady}>
+                  Verifikation starten
+                </button>
+              </div>
+            ) : null}
+          </>
+        ) : null}
+
+        <div className="panel accessStatusPanel">
+          <p>Mode: {roomState?.mode ?? "..."}</p>
+          <p>Door: {roomState?.doorStatus ?? "..."}</p>
+          <p>Active Session: {activeSessionId ?? "none"}</p>
         </div>
-      )}
-    </div>
-  );
-}
 
-function BuzzerPage() {
-  const { roomState, reload } = useRoomState();
-  const [sessionActive, setSessionActive] = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    // Watch room state changes
-    if (roomState?.mode === ROOM_MODE.CLOSED && !roomState?.activeSessionId) {
-      setSessionActive(false);
-    } else if (roomState?.activeSessionId) {
-      setSessionActive(true);
-    }
-  }, [roomState]);
-
-  const startBuzzerSession = async () => {
-    if (loading) return;
-    setLoading(true);
-    try {
-      await api.createSession("buzzer-device");
-      setSessionActive(true);
-      await reload();
-    } catch (error) {
-      console.error("Failed to start buzzer session:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="screen buzzer">
-      <h1>Buzzer Station</h1>
-      
-      {!sessionActive ? (
-        <div className="buzzerPanel">
-          <div className="panel buzzerInstructions">
-            <h2>Buzzer Challenge</h2>
-            <p>
-              Willkommen zur Buzzer-Station! Drücke den Button unten, um eine neue Session zu starten.
-              Die Kamerabilder zeigen Multiple-Choice-Fragen, die du beantworten musst, indem du die richtigen
-              Kamera-Feeds identifizierst und auf dem Buzzer wählst.
-            </p>
-            <p className="muted">
-              <strong>Anleitung:</strong> Beobachte die Kamerabilder aufmerksam, beantworte die Frage korrekt,
-              und drücke dann den entsprechenden Buzzer-Button.
-            </p>
-          </div>
-          
-          <button 
-            className="buzzerButton" 
-            onClick={startBuzzerSession}
-            disabled={loading}
-          >
-            {loading ? "Starte..." : "BUZZER"}
-          </button>
-        </div>
-      ) : (
-        <div className="buzzerActive">
-          <div className="buzzerHeader">
-            <h2>Session läuft...</h2>
-            <p className="muted">Beobachte die Kamerabilder unten und antworte auf die Frage.</p>
-          </div>
-          
-          <div className="cameraGrid">
-            <div className="cameraStream">
-              <div className="cameraPlaceholder">
-                <div className="cameraPlaceholderContent">
-                  <span>KAMERA 1</span>
-                  <span className="cameraPlaceholderSubtext">Placeholder Stream</span>
-                </div>
-              </div>
-            </div>
-            
-            <div className="cameraStream">
-              <div className="cameraPlaceholder">
-                <div className="cameraPlaceholderContent">
-                  <span>KAMERA 2</span>
-                  <span className="cameraPlaceholderSubtext">Placeholder Stream</span>
-                </div>
-              </div>
-            </div>
-            
-            <div className="cameraStream">
-              <div className="cameraPlaceholder">
-                <div className="cameraPlaceholderContent">
-                  <span>KAMERA 3</span>
-                  <span className="cameraPlaceholderSubtext">Placeholder Stream</span>
-                </div>
-              </div>
-            </div>
-            
-            <div className="cameraStream">
-              <div className="cameraPlaceholder">
-                <div className="cameraPlaceholderContent">
-                  <span>KAMERA 4</span>
-                  <span className="cameraPlaceholderSubtext">Placeholder Stream</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="panel buzzerStatus">
-            <p><strong>Status:</strong> {roomState?.mode ?? "..."}</p>
-            <p><strong>Active Session:</strong> {roomState?.activeSessionId ?? "none"}</p>
-          </div>
-        </div>
-      )}
+        <p className="accessStatus">{status}</p>
+      </div>
     </div>
   );
 }
@@ -1127,7 +1145,6 @@ function Home() {
       <h1>Inner Circle MVP</h1>
       <div className="panel nav">
         <Link to="/access">/access</Link>
-        <Link to="/buzzer">/buzzer</Link>
         <Link to="/inner-display">/inner-display</Link>
         <Link to="/traffic-light">/traffic-light</Link>
         <Link to="/operator">/operator</Link>
@@ -1141,7 +1158,6 @@ export function App() {
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/access" element={<AccessPage />} />
-      <Route path="/buzzer" element={<BuzzerPage />} />
       <Route path="/inner-display" element={<InnerDisplayPage />} />
       <Route path="/traffic-light" element={<TrafficLightPage />} />
       <Route path="/operator" element={<OperatorPage />} />
