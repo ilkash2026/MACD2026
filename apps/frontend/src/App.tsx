@@ -321,6 +321,116 @@ function AccessPage() {
   );
 }
 
+function BuzzerPage() {
+  const { roomState, reload } = useRoomState();
+  const [sessionActive, setSessionActive] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    // Watch room state changes
+    if (roomState?.mode === ROOM_MODE.CLOSED && !roomState?.activeSessionId) {
+      setSessionActive(false);
+    } else if (roomState?.activeSessionId) {
+      setSessionActive(true);
+    }
+  }, [roomState]);
+
+  const startBuzzerSession = async () => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      await api.createSession("buzzer-device");
+      setSessionActive(true);
+      await reload();
+    } catch (error) {
+      console.error("Failed to start buzzer session:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="screen buzzer">
+      <h1>Buzzer Station</h1>
+      
+      {!sessionActive ? (
+        <div className="buzzerPanel">
+          <div className="panel buzzerInstructions">
+            <h2>Buzzer Challenge</h2>
+            <p>
+              Willkommen zur Buzzer-Station! Drücke den Button unten, um eine neue Session zu starten.
+              Die Kamerabilder zeigen Multiple-Choice-Fragen, die du beantworten musst, indem du die richtigen
+              Kamera-Feeds identifizierst und auf dem Buzzer wählst.
+            </p>
+            <p className="muted">
+              <strong>Anleitung:</strong> Beobachte die Kamerabilder aufmerksam, beantworte die Frage korrekt,
+              und drücke dann den entsprechenden Buzzer-Button.
+            </p>
+          </div>
+          
+          <button 
+            className="buzzerButton" 
+            onClick={startBuzzerSession}
+            disabled={loading}
+          >
+            {loading ? "Starte..." : "BUZZER"}
+          </button>
+        </div>
+      ) : (
+        <div className="buzzerActive">
+          <div className="buzzerHeader">
+            <h2>Session läuft...</h2>
+            <p className="muted">Beobachte die Kamerabilder unten und antworte auf die Frage.</p>
+          </div>
+          
+          <div className="cameraGrid">
+            <div className="cameraStream">
+              <div className="cameraPlaceholder">
+                <div className="cameraPlaceholderContent">
+                  <span>KAMERA 1</span>
+                  <span className="cameraPlaceholderSubtext">Placeholder Stream</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="cameraStream">
+              <div className="cameraPlaceholder">
+                <div className="cameraPlaceholderContent">
+                  <span>KAMERA 2</span>
+                  <span className="cameraPlaceholderSubtext">Placeholder Stream</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="cameraStream">
+              <div className="cameraPlaceholder">
+                <div className="cameraPlaceholderContent">
+                  <span>KAMERA 3</span>
+                  <span className="cameraPlaceholderSubtext">Placeholder Stream</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="cameraStream">
+              <div className="cameraPlaceholder">
+                <div className="cameraPlaceholderContent">
+                  <span>KAMERA 4</span>
+                  <span className="cameraPlaceholderSubtext">Placeholder Stream</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="panel buzzerStatus">
+            <p><strong>Status:</strong> {roomState?.mode ?? "..."}</p>
+            <p><strong>Active Session:</strong> {roomState?.activeSessionId ?? "none"}</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function InnerDisplayPage() {
   const [data, setData] = useState<InnerDisplayData | null>(null);
 
@@ -1017,6 +1127,7 @@ function Home() {
       <h1>Inner Circle MVP</h1>
       <div className="panel nav">
         <Link to="/access">/access</Link>
+        <Link to="/buzzer">/buzzer</Link>
         <Link to="/inner-display">/inner-display</Link>
         <Link to="/traffic-light">/traffic-light</Link>
         <Link to="/operator">/operator</Link>
@@ -1030,6 +1141,7 @@ export function App() {
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/access" element={<AccessPage />} />
+      <Route path="/buzzer" element={<BuzzerPage />} />
       <Route path="/inner-display" element={<InnerDisplayPage />} />
       <Route path="/traffic-light" element={<TrafficLightPage />} />
       <Route path="/operator" element={<OperatorPage />} />
